@@ -108,7 +108,7 @@ class Sentence():
         """ 
         if len(self.cells) == self.count:
             return self.cells
-        return 0 
+        return set()
 
     def known_safes(self):
         """
@@ -116,7 +116,7 @@ class Sentence():
         """
         if self.count == 0:
             return self.cells
-        return 0
+        return set()
 
     def mark_mine(self, cell):
         """
@@ -178,6 +178,7 @@ class MinesweeperAI():
         Marks a cell as safe, and updates all knowledge
         to mark that cell as safe as well.
         """
+
         self.safes.add(cell)
         for sentence in self.knowledge:
             sentence.mark_safe(cell)
@@ -214,13 +215,11 @@ class MinesweeperAI():
             # pattern we see for cell[0] is first three -1 then 0 then plus 1
             # for cell[1] we can see first -1 second 0 third +1
             for i in range(-1, 2):
-                print("First i ", i)
                 for j in range(-1, 2):
-                    print("first j ", j)
                     neighb = (cell[0] +i, cell[1] +j)
-                    # make sure there is no negative cells 
+                    # make sure the cells are in the field
                     # when our cell is on a wall or in the corner
-                    if neighb[0] >= 0 and neighb[1] >= 0:
+                    if neighb[0] >= 0 and neighb[0] <= 7 and neighb[1] >= 0 and neighb[1] <= 7 :
                         if neighb != cell:
                             neighbours.append(neighb)
             return neighbours
@@ -232,20 +231,45 @@ class MinesweeperAI():
         for c in neighbours:
             if c in self.mines:
                 neighbours_copy.remove(c)
-                # TODO Should we reduce the count here??
                 count -= 1
             if c in self.safes:
                 neighbours_copy.remove(c)
 
+
         # then we can add a new sentence to our knowledge base 
         # containing the cells and the count
-
         sentence = Sentence(neighbours_copy, count)
         self.knowledge.append(sentence)
 
         # 4) mark any additional cells as safe or as mines if it can be concluded based on the AI's knowledge base
         
+        for knowledge in self.knowledge:
+            if knowledge.known_mines():
+                [self.mark_mine(cell) for cell in  knowledge.cells]
+                
+            if knowledge.known_safes():
+                [self.mark_safe(cell) for cell in  knowledge.cells]
+
+
+        ## Remove empty Sentences
+        self.knowledge = [k for k in self.knowledge if len(k.cells)]
+
         # 5) add any new sentences to the AI's knowledge base if they can be inferred from existing knowledge
+        """
+        Removing subsets.
+
+        KNOWLEDGE BEFORE   {(0, 3), (1, 3)} = 1 
+                           {(2, 1), (0, 3), (2, 3), (2, 2), (1, 3)} = 2
+
+        KNOWLEDGE AFTER    {(0, 3), (1, 3)} = 1 
+                           {(2, 1), (2, 3), (2, 2)} = 1
+        """
+        # TODO i dont like the modifing the thing we loop through  
+        for knowledge in self.knowledge:
+            for k in self.knowledge: 
+                if k.cells.issubset(knowledge.cells) and k is not knowledge:
+                    knowledge.cells -= k.cells
+                    knowledge.count -= k.count
 
 
     def make_safe_move(self):
@@ -257,7 +281,12 @@ class MinesweeperAI():
         This function may use the knowledge in self.mines, self.safes
         and self.moves_made, but should not modify any of those values.
         """
-        raise NotImplementedError
+        
+        # Check in self.moves_made to see what moves are still left
+        # Check in self.safes what what is safe
+        for move in self.safes:
+            if move not in self.moves_made:
+                return move
 
     def make_random_move(self):
         """
@@ -266,4 +295,13 @@ class MinesweeperAI():
             1) have not already been chosen, and
             2) are not known to be mines
         """
-        raise NotImplementedError
+         
+        possible_moves = []
+        for i in range(0, 8):
+            for j in range(0, 8):
+                if (i, j) not in self.mines and (i, j) not in self.moves_made:
+                    possible_moves.append((i,j))
+        try:
+            return possible_moves[0]
+        except:
+            return None
