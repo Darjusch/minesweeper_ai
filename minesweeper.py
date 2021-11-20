@@ -227,18 +227,17 @@ class MinesweeperAI():
         # then we remove the ones that are 
 
         neighbours = create_neighbours(cell)
-        neighbours_copy = copy.deepcopy(neighbours)
-        for c in neighbours:
+        for c in list(neighbours):
             if c in self.mines:
-                neighbours_copy.remove(c)
+                neighbours.remove(c)
                 count -= 1
             if c in self.safes:
-                neighbours_copy.remove(c)
+                neighbours.remove(c)
 
 
         # then we can add a new sentence to our knowledge base 
         # containing the cells and the count
-        sentence = Sentence(neighbours_copy, count)
+        sentence = Sentence(neighbours, count)
         self.knowledge.append(sentence)
 
         # 4) mark any additional cells as safe or as mines if it can be concluded based on the AI's knowledge base
